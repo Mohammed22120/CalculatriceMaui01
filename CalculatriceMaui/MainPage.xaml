@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:ios="clr-namespace:Microsoft.Maui.Controls.PlatformConfiguration.iOSSpecific;assembly=Microsoft.Maui.Controls"
+             x:Class="CalculatriceMaui.MainPage"
+             Title="Calculatrice"
+             BackgroundColor="#121212"
+             ios:Page.UseSafeArea="True">
+
+    <ContentPage.Resources>
+        <!-- Style de base commun à tous les boutons -->
+        <Style TargetType="Button">
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="0" />
+            <Setter Property="TextColor" Value="White" />
+            <Setter Property="MinimumWidthRequest" Value="0" />
+            <Setter Property="MinimumHeightRequest" Value="0" />
+        </Style>
+        <Style TargetType="Button" Class="Digit"><Setter Property="BackgroundColor" Value="#2C2C2E" /></Style>
+        <Style TargetType="Button" Class="Func"><Setter Property="BackgroundColor" Value="#48484A" /></Style>
+        <Style TargetType="Button" Class="Op"><Setter Property="BackgroundColor" Value="#FF9F0A" /></Style>
+        <Style TargetType="Button" Class="Equal"><Setter Property="BackgroundColor" Value="#30D158" /></Style>
+        <Style TargetType="Button" Class="Small">
+            <Setter Property="BackgroundColor" Value="#3A3A3C" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="HeightRequest" Value="32" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="14,0" />
+        </Style>
+    </ContentPage.Resources>
+
+    <!-- LAYOUT 1 : Grid racine (3 zones ; réorganisée en deux colonnes en paysage) -->
+    <Grid x:Name="RootGrid"
+          Padding="12"
+          RowSpacing="8"
+          ColumnSpacing="12"
+          RowDefinitions="*,Auto,2.4*"
+          ColumnDefinitions="*">
+
+        <!-- LAYOUT 2 : Border = panneau d'affichage arrondi -->
+        <Border x:Name="DisplayBorder"
+                Grid.Row="0"
+                BackgroundColor="#1C1C1E"
+                Stroke="#38383A"
+                StrokeThickness="1"
+                Padding="14,10">
+            <Border.StrokeShape>
+                <RoundRectangle CornerRadius="20" />
+            </Border.StrokeShape>
+
+            <!-- LAYOUT 3 : VerticalStackLayout = empile barre d'outils, historique, opération, résultat -->
+            <VerticalStackLayout Spacing="2" VerticalOptions="End">
+
+                <!-- LAYOUT 4 : HorizontalStackLayout = petits boutons alignés -->
+                <HorizontalStackLayout Spacing="8" HorizontalOptions="Start">
+                    <Button x:Name="HistoryButton" Text="Historique" StyleClass="Small" Clicked="OnHistoryClicked"
+                            SemanticProperties.Description="Afficher ou masquer l'historique" />
+                    <Button Text="Copier" StyleClass="Small" Clicked="OnCopyClicked"
+                            SemanticProperties.Description="Copier le résultat" />
+                </HorizontalStackLayout>
+
+                <!-- LAYOUT 5 : ScrollView = historique (vertical) -->
+                <ScrollView x:Name="HistoryScroll" IsVisible="False" MaximumHeightRequest="90">
+                    <VerticalStackLayout x:Name="HistoryStack" Spacing="2" />
+                </ScrollView>
+
+                <!-- ScrollView horizontal : une longue opération défile au lieu de déborder -->
+                <ScrollView x:Name="ExpressionScroll"
+                            Orientation="Horizontal"
+                            HorizontalScrollBarVisibility="Never"
+                            HorizontalOptions="End">
+                    <Label x:Name="ExpressionLabel"
+                           FontSize="20"
+                           TextColor="#8E8E93"
+                           LineBreakMode="NoWrap"
+                           HorizontalTextAlignment="End"
+                           SemanticProperties.Description="Opération en cours" />
+                </ScrollView>
+
+                <Label x:Name="ResultLabel"
+                       Text="0"
+                       FontSize="60"
+                       TextColor="White"
+                       LineBreakMode="NoWrap"
+                       HorizontalTextAlignment="End"
+                       SemanticProperties.Description="Résultat" />
+            </VerticalStackLayout>
+        </Border>
+
+        <!-- LAYOUT 6 : FlexLayout = rangée des fonctions avancées qui se partage la largeur -->
+        <FlexLayout x:Name="SciRow" Grid.Row="1" Direction="Row" Wrap="NoWrap" JustifyContent="SpaceEvenly">
+            <Button Text="√"  StyleClass="Func" FlexLayout.Grow="1" FlexLayout.Basis="30%" Margin="0,0,4,0" HeightRequest="44" FontSize="20" Clicked="OnSqrtClicked"
+                    SemanticProperties.Description="Racine carrée" />
+            <Button Text="x²" StyleClass="Func" FlexLayout.Grow="1" FlexLayout.Basis="30%" Margin="4,0" HeightRequest="44" FontSize="20" Clicked="OnSquareClicked"
+                    SemanticProperties.Description="Carré" />
+            <Button Text="1/x" StyleClass="Func" FlexLayout.Grow="1" FlexLayout.Basis="30%" Margin="4,0,0,0" HeightRequest="44" FontSize="20" Clicked="OnReciprocalClicked"
+                    SemanticProperties.Description="Inverse" />
+        </FlexLayout>
+
+        <!-- Clavier : Grid 5 × 4, les cases se partagent l'espace disponible (*) -->
+        <Grid x:Name="Keypad"
+              Grid.Row="2"
+              RowSpacing="8"
+              ColumnSpacing="8"
+              RowDefinitions="*,*,*,*,*"
+              ColumnDefinitions="*,*,*,*">
+
+            <Button Grid.Row="0" Grid.Column="0" Text="C"  StyleClass="Func"  Clicked="OnClearClicked"     SemanticProperties.Description="Tout effacer" />
+            <Button Grid.Row="0" Grid.Column="1" Text="⌫"  StyleClass="Func"  Clicked="OnBackspaceClicked" SemanticProperties.Description="Effacer le dernier caractère" />
+            <Button Grid.Row="0" Grid.Column="2" Text="%"  StyleClass="Func"  Clicked="OnPercentClicked"   SemanticProperties.Description="Pourcentage" />
+            <Button Grid.Row="0" Grid.Column="3" Text="÷"  StyleClass="Op" ClassId="div" Clicked="OnOperatorClicked" SemanticProperties.Description="Diviser" />
+
+            <Button Grid.Row="1" Grid.Column="0" Text="7" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="1" Grid.Column="1" Text="8" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="1" Grid.Column="2" Text="9" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="1" Grid.Column="3" Text="×" StyleClass="Op" ClassId="mul" Clicked="OnOperatorClicked" SemanticProperties.Description="Multiplier" />
+
+            <Button Grid.Row="2" Grid.Column="0" Text="4" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="2" Grid.Column="1" Text="5" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="2" Grid.Column="2" Text="6" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="2" Grid.Column="3" Text="−" StyleClass="Op" ClassId="sub" Clicked="OnOperatorClicked" SemanticProperties.Description="Soustraire" />
+
+            <Button Grid.Row="3" Grid.Column="0" Text="1" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="3" Grid.Column="1" Text="2" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="3" Grid.Column="2" Text="3" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="3" Grid.Column="3" Text="+" StyleClass="Op" ClassId="add" Clicked="OnOperatorClicked" SemanticProperties.Description="Additionner" />
+
+            <Button Grid.Row="4" Grid.Column="0" Text="±" StyleClass="Digit" Clicked="OnSignClicked" SemanticProperties.Description="Changer le signe" />
+            <Button Grid.Row="4" Grid.Column="1" Text="0" StyleClass="Digit" Clicked="OnDigitClicked" />
+            <Button Grid.Row="4" Grid.Column="2" Text="," StyleClass="Digit" Clicked="OnDecimalClicked" SemanticProperties.Description="Virgule" />
+            <Button Grid.Row="4" Grid.Column="3" Text="=" StyleClass="Equal" Clicked="OnEqualsClicked" SemanticProperties.Description="Égal" />
+        </Grid>
+    </Grid>
+</ContentPage>
